@@ -1,6 +1,6 @@
-# Page Audit Tool — v3 Agentic
+# Page Audit Tool - v3 Agentic
 
-An AI-powered single-page website auditor with a Plan → Act → Reflect agent loop.
+An AI-powered single-page website auditor with a Plan - Act - Reflect agent loop.
 Works on all tech stacks. Drop in a URL and get factual metrics plus grounded AI insights.
 
 Built for EIGHT25MEDIA's AI-Native Software Engineer assignment.
@@ -15,7 +15,7 @@ Built for EIGHT25MEDIA's AI-Native Software Engineer assignment.
 | **Prompt Logs** | https://audit-tool-production-6990.up.railway.app/logs |
 | **GitHub** | https://github.com/gayan2002/audit-tool-with-agents |
 
-> The `/logs` endpoint returns the last 5 prompt logs as JSON — showing the full system prompt, every tool call and result, structured metrics payload, and raw model output before parsing.
+> The `/logs` endpoint returns the last 5 prompt logs as JSON - showing the full system prompt, every tool call and result, structured metrics payload, and raw model output before parsing.
 
 ---
 
@@ -23,7 +23,7 @@ Built for EIGHT25MEDIA's AI-Native Software Engineer assignment.
 
 ```bash
 git clone https://github.com/gayan2002/audit-tool-with-agents.git
-cd audit-tool
+cd audit-tool-with-agents
 
 pip install -r requirements.txt
 python -m playwright install chromium
@@ -41,51 +41,51 @@ python main.py
 
 ## Architecture Overview
 
-Four clearly separated layers — each with one job, no cross-contamination.
+Four clearly separated layers - each with one job, no cross-contamination.
 
 ```
 User (browser)
-     │  POST /audit { url }
-     ▼
-┌─────────────────────────────────────────────────────────────┐
-│  main.py — FastAPI                                           │
-│  Validates input, calls agent, strips internal fields,       │
-│  returns { metrics, insights, agent_steps, render_method }  │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────────────┐
-│  ai_engine.py — Agent Orchestrator                           │
-│                                                              │
-│  1. PLAN    — seeds messages array, instructs tool order     │
-│  2. ACT     — calls tools one at a time via tool registry    │
-│  3. REFLECT — appends observations, decides next tool        │
-│  4. CRITIQUE — self-scores each insight 0-100, flags low     │
-│                                                              │
-│  Saves full reasoning trace to prompt_logs/                  │
-└──────────────────┬───────────────────────────────────────────┘
-                   │  tool calls by name
-                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│  tools.py — Tool Registry                                    │
-│                                                              │
-│  Maps tool names → scraper functions for the agent.          │
-│  The agent sees the tool schema; your Python runs the code.  │
-│                                                              │
-│  scrape_page · fetch_videos · get_content_sample             │
-│  extract_ctas · fetch_links · fetch_images · check_seo_tags  │
-└──────────────────┬───────────────────────────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│  scraper.py — 3-Tier Metric Extractor                        │
-│                                                              │
-│  Tier 1: requests + BeautifulSoup  (static HTML)            │
-│  Tier 2: __NEXT_DATA__ detection   (Next.js / Gatsby SSR)   │
-│  Tier 3: Playwright headless       (React / Vue / Angular)  │
-│                                                              │
-│  Returns plain dict of factual metrics. Zero AI knowledge.  │
-└─────────────────────────────────────────────────────────────┘
+     |  POST /audit { url }
+     v
++----------------------------------------------------------+
+|  main.py - FastAPI                                        |
+|  Validates input, calls agent, strips internal fields,    |
+|  returns { metrics, insights, agent_steps, render_method }|
++----------------------+-----------------------------------+
+                       |
+                       v
++----------------------------------------------------------+
+|  ai_engine.py - Agent Orchestrator                        |
+|                                                           |
+|  1. PLAN    - seeds messages array, instructs tool order  |
+|  2. ACT     - calls tools one at a time via tool registry |
+|  3. REFLECT - appends observations, decides next tool     |
+|  4. CRITIQUE - self-scores each insight 0-100, flags low  |
+|                                                           |
+|  Saves full reasoning trace to prompt_logs/               |
++------------------+----------------------------------------+
+                   |  tool calls by name
+                   v
++----------------------------------------------------------+
+|  tools.py - Tool Registry                                 |
+|                                                           |
+|  Maps tool names to scraper functions for the agent.      |
+|  The agent sees the tool schema; Python runs the code.    |
+|                                                           |
+|  scrape_page / fetch_videos / get_content_sample          |
+|  extract_ctas / fetch_links / fetch_images / check_seo_tags|
++------------------+----------------------------------------+
+                   |
+                   v
++----------------------------------------------------------+
+|  scraper.py - 3-Tier Metric Extractor                     |
+|                                                           |
+|  Tier 1: requests + BeautifulSoup  (static HTML)          |
+|  Tier 2: __NEXT_DATA__ detection   (Next.js / Gatsby SSR) |
+|  Tier 3: Playwright headless       (React / Vue / Angular)|
+|                                                           |
+|  Returns plain dict of factual metrics. Zero AI knowledge.|
++----------------------------------------------------------+
 ```
 
 ---
@@ -99,22 +99,22 @@ the model decides what to do next at each step.
 messages = [system_prompt, user: "audit https://..."]
 
 loop:
-  response = call_llm(messages)          ← full history sent every call
+  response = call_llm(messages)          # full history sent every call
 
   if response is tool call:
-    result = TOOL_REGISTRY[name](url)    ← Python runs the function
-    messages.append(tool_result)         ← observation injected into history
+    result = TOOL_REGISTRY[name](url)    # Python runs the function
+    messages.append(tool_result)         # observation injected into history
     continue
 
   if response is done:
     final_audit = response.audit
     break
 
-self_critique(final_audit)               ← AI scores its own output
+self_critique(final_audit)               # AI scores its own output
 save_prompt_log()
 ```
 
-The model sees its full observation history on every call — this is what gives
+The model sees its full observation history on every call - this is what gives
 it memory across steps without any external database.
 
 ---
@@ -125,7 +125,7 @@ it memory across steps without any external database.
 |------|--------|-----------|-------|
 | 1 | requests + BeautifulSoup | WordPress, PHP, Django, plain HTML | ~0.5s |
 | 2 | `__NEXT_DATA__` JSON detection | Next.js, Gatsby, React SSR | ~0.5s |
-| 3 | Playwright headless Chromium | React SPA, Vue, Angular, Svelte | ~5–8s |
+| 3 | Playwright headless Chromium | React SPA, Vue, Angular, Svelte | ~5-8s |
 
 Playwright uses `wait_until='load'` (never `networkidle`) and blocks 15+ analytics
 domains to prevent timeout hangs on heavy e-commerce sites. Falls back to
@@ -146,7 +146,7 @@ domains to prevent timeout hangs on heavy e-commerce sites. Falls back to
 - H1 actual text content
 
 **Content**
-- Word count (nav, header, footer, aside excluded — main content only)
+- Word count (nav, header, footer, aside excluded - main content only)
 - H1 / H2 / H3 counts
 - Heading hierarchy issues (missing_h1, duplicate_h1, h3_before_h2)
 
@@ -181,7 +181,7 @@ This version uses an agent loop so the model can:
 - Build up an observation history before scoring
 - Verify its own output in a separate self-critique pass
 
-The prompt log now shows a full reasoning trace — not a single prompt/response pair.
+The prompt log now shows a full reasoning trace - not a single prompt/response pair.
 
 ### Hallucination Reduction Techniques
 
@@ -196,12 +196,12 @@ and `get_content_sample`. It cannot skip straight to conclusions.
 
 **3. `metric_cited` field on every insight**
 The output schema requires the model to name the exact `key: value` from tool results
-that supports each claim. This makes hallucinations instantly visible in prompt logs —
-any cited value that doesn't match a tool result is a fabrication.
+that supports each claim. This makes hallucinations instantly visible in prompt logs -
+any cited value that does not match a tool result is a fabrication.
 
 **4. Self-critique pass with confidence scores**
 After producing the draft audit, a second prompt asks the model to assign a confidence
-score (0–100) to each section. Sections scoring below 70 are flagged in
+score (0-100) to each section. Sections scoring below 70 are flagged in
 `_low_confidence_sections` in the prompt log and displayed as warnings in the UI.
 
 **5. Industry benchmarks injected into system prompt**
@@ -209,12 +209,12 @@ Rather than letting the model invent thresholds, the prompt provides them explic
 
 | Benchmark | Source |
 |-----------|--------|
-| Meta title 50–60 chars | Google Search Central |
-| Meta description 120–155 chars | Google Search Central / John Mueller |
+| Meta title 50-60 chars | Google Search Central |
+| Meta description 120-155 chars | Google Search Central / John Mueller |
 | H1 = exactly 1 | Google Search Central best practice |
 | Schema.org markup | schema.org (Google / Microsoft / Yahoo / Yandex) |
 | Word count 300 / 600 thresholds | Backlinko, HubSpot aggregate studies |
-| CTA density 1–5 per 1000 words | NNGroup, CXL Institute |
+| CTA density 1-5 per 1000 words | NNGroup, CXL Institute |
 | Alt text < 10% missing | WCAG, Google Lighthouse |
 
 **6. `temperature: 0.2`**
@@ -224,7 +224,7 @@ creative but incorrect responses across repeated runs.
 **7. Retry loop on empty / null responses**
 Free models occasionally return a null `content` field under load. The `call_llm`
 function retries up to 3 times with exponential backoff before raising an error,
-so a single bad response doesn't crash the audit.
+so a single bad response does not crash the audit.
 
 **8. Explicit unknown boundary in system prompt**
 The system prompt lists what the model does NOT have access to: page speed, mobile
@@ -248,18 +248,18 @@ Every audit writes a timestamped JSON to `prompt_logs/`. Each log contains:
       "step": 1,
       "tool_called": "scrape_page",
       "reason": "Get base metrics before analysis",
-      "tool_result": { "word_count": 263, "h1_count": 1, "..." }
+      "tool_result": { "word_count": 263, "h1_count": 1 }
     },
     {
       "step": 2,
       "tool_called": "fetch_videos",
       "reason": "Audit video accessibility coverage",
-      "tool_result": { "total": 9, "native_missing_captions_pct": 100.0, "..." }
+      "tool_result": { "total": 9, "native_missing_captions_pct": 100.0 }
     }
   ],
-  "raw_final_output": { "seo_structure": { "score": 55, "..." } },
+  "raw_final_output": { "seo_structure": { "score": 55 } },
   "total_steps": 4,
-  "full_messages": [ "...complete conversation history..." ]
+  "full_messages": []
 }
 ```
 
@@ -273,7 +273,7 @@ sample logs in the repository.
 **Scores are model-generated, not formula-based.**
 The AI assigns integer scores based on the benchmarks provided in the prompt.
 Two runs on the same page may return slightly different scores. The production-grade
-fix is Python rubrics that calculate scores deterministically — the AI would then
+fix is Python rubrics that calculate scores deterministically - the AI would then
 only write finding and recommendation text. This is the highest-priority improvement
 for a v4.
 
@@ -302,26 +302,26 @@ specific paid model via `OPENROUTER_MODEL` in `.env`.
 
 ## What I Would Improve With More Time
 
-1. **Deterministic scoring rubrics in Python** — move score calculation out of the AI
+1. **Deterministic scoring rubrics in Python** - move score calculation out of the AI
    and into hardcoded Python functions for each metric. AI only writes finding and
    recommendation text. Eliminates score variance between runs entirely.
 
-2. **Core Web Vitals via Google PageSpeed Insights API** — adds LCP, CLS, FID to the
+2. **Core Web Vitals via Google PageSpeed Insights API** - adds LCP, CLS, FID to the
    factual metrics layer without any AI estimation.
 
-3. **Competitor comparison mode** — run the PAR loop on two URLs in parallel, then
+3. **Competitor comparison mode** - run the PAR loop on two URLs in parallel, then
    a third synthesis call diffs the metrics and scores section by section.
 
-4. **Redis caching by URL + content hash** — repeat audits are instant and don't
+4. **Redis caching by URL + content hash** - repeat audits are instant and do not
    burn API credits.
 
-5. **Playwright with residential proxies** — handles bot-protected e-commerce sites
+5. **Playwright with residential proxies** - handles bot-protected e-commerce sites
    properly.
 
-6. **Scoring rubric as YAML config** — lets non-engineers tune what "good" means
+6. **Scoring rubric as YAML config** - lets non-engineers tune what "good" means
    for different site types (e-commerce vs SaaS vs local service).
 
-7. **Confidence threshold retry** — if self-critique flags a section below 70,
+7. **Confidence threshold retry** - if self-critique flags a section below 70,
    automatically re-run only that section with a targeted tool call rather than
    just flagging it as a warning.
 
@@ -332,12 +332,12 @@ specific paid model via `OPENROUTER_MODEL` in `.env`.
 | Layer | Technology |
 |-------|-----------|
 | Backend | FastAPI + Uvicorn |
-| Scraping — static | requests + BeautifulSoup4 + lxml |
-| Scraping — JS | Playwright (Chromium) |
+| Scraping - static | requests + BeautifulSoup4 + lxml |
+| Scraping - JS | Playwright (Chromium) |
 | Agent loop | Custom PAR loop in ai_engine.py |
 | Tool registry | Plain Python dict in tools.py |
 | AI | OpenRouter API (model configurable via `.env`) |
-| Frontend | Vanilla HTML / CSS / JS — no build step |
+| Frontend | Vanilla HTML / CSS / JS - no build step |
 | Config | python-dotenv |
 
 ---
@@ -353,5 +353,3 @@ specific paid model via `OPENROUTER_MODEL` in `.env`.
 | `static/index.html` | Single-file dashboard. Metrics, video section, AI insights, recommendations, agent trace. |
 | `prompt_logs/` | Auto-created. One timestamped JSON per run with full reasoning trace. Gitignored. |
 | `.env.example` | Config template. Copy to `.env` and add your OpenRouter API key. |
-#   a u d i t - t o o l - w i t h - a g e n t s  
- 
