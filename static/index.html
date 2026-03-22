@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Audit Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0c0d0f; --surface: #141518; --border: #1f2125;
+      --muted:   #3a3d42; --text:    #e8e9ec; --sub:    #7a7f88;
+      --accent:  #c8ff57; --good:    #4ade80; --fair:   #facc15;
+      --poor:    #f87171; --blue:    #60a5fa; --r: 10px;
+    }
+    html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; }
+    .shell { max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+
+    header { display: flex; align-items: center; justify-content: space-between; padding: 32px 0 40px; border-bottom: 1px solid var(--border); }
+    .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.03em; }
+    .logo span { color: var(--accent); }
+    .badge { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--sub); border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .badge-agentic { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--accent); border: 1px solid var(--accent); padding: 3px 10px; border-radius: 999px; letter-spacing: 0.08em; opacity: 0.75; }
+
+    .input-section { padding: 56px 0 48px; }
+    .eyebrow { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+    h1 { font-family: 'Syne', sans-serif; font-size: clamp(1.9rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 36px; }
+    h1 em { font-style: normal; color: var(--accent); }
+    .url-form { display: flex; gap: 10px; max-width: 680px; }
+    .url-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.85rem; padding: 14px 18px; outline: none; transition: border-color 0.2s; }
+    .url-input::placeholder { color: var(--muted); }
+    .url-input:focus { border-color: var(--accent); }
+    .audit-btn { background: var(--accent); color: #0c0d0f; border: none; border-radius: var(--r); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 14px 28px; cursor: pointer; transition: opacity 0.15s, transform 0.1s; white-space: nowrap; }
+    .audit-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .audit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .error-box { display: none; background: #2a1515; border: 1px solid #5a2020; border-radius: var(--r); padding: 14px 18px; color: var(--poor); font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-top: 16px; max-width: 680px; }
+
+    .loader { display: none; align-items: center; gap: 14px; margin-top: 36px; color: var(--sub); font-size: 0.85rem; }
+    .loader.active { display: flex; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #results { display: none; }
+    .results-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 40px 0 28px; border-top: 1px solid var(--border); }
+    .results-url { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--sub); word-break: break-all; }
+    .results-url strong { color: var(--accent); }
+    .results-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .render-badge { font-family: 'DM Mono', monospace; font-size: 0.7rem; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+    .steps-badge { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--accent); border: 1px solid var(--muted); padding: 3px 10px; border-radius: 999px; opacity: 0.7; }
+
+    .section-label { font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sub); margin-bottom: 16px; }
+
+    /* Metric cards */
+    .metrics-section { margin-bottom: 48px; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; align-items: start; }
+    .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; height: fit-content; }
+    .metric-card.video-card { border-color: #1e3a5f; background: #0d1b2a; }
+    .metric-card.warn .metric-value { color: var(--poor); }
+    .metric-card.ok .metric-value { color: var(--good); }
+    .metric-label { font-size: 0.72rem; color: var(--sub); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .metric-card.video-card .metric-label { color: #4a7fa8; }
+    .metric-value { font-family: 'DM Mono', monospace; font-size: 1.55rem; font-weight: 500; color: var(--text); line-height: 1; }
+    .metric-card.video-card .metric-value { color: var(--blue); }
+    .metric-sub { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--sub); margin-top: 4px; }
+    .flag-pill { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.65rem; padding: 2px 8px; border-radius: 999px; margin-top: 6px; }
+    .flag-optimal   { background: #14291f; color: var(--good); border: 1px solid #1f4030; }
+    .flag-too_short { background: #292210; color: var(--fair); border: 1px solid #3d3310; }
+    .flag-truncated { background: #2a1515; color: var(--poor); border: 1px solid #4a2020; }
+
+    .video-section-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #4a7fa8; margin: 16px 0 10px; padding: 6px 10px; background: #0d1b2a; border: 1px solid #1e3a5f; border-radius: 6px; display: inline-block; }
+
+    .meta-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; margin-top: 12px; }
+    .meta-row { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .meta-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .meta-key { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--sub); white-space: nowrap; min-width: 140px; padding-top: 2px; }
+    .meta-val { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text); word-break: break-word; flex: 1; }
+    .meta-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-left: auto; }
+    .meta-len { font-size: 0.68rem; color: var(--sub); white-space: nowrap; }
+
+    /* Insights */
+    .insights-section { margin-bottom: 48px; }
+    .insight-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .insight-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; }
+    .insight-card.video-insight { border-color: #1e3a5f; background: #0d1b2a; }
+    .insight-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .insight-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.85rem; color: var(--text); }
+    .insight-card.video-insight .insight-title { color: var(--blue); }
+
+    .score-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+    .score-num { font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 500; line-height: 1; }
+    .score-bar-bg { width: 56px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .score-bar { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+    .confidence-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    .confidence-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); }
+    .confidence-bar-bg { flex: 1; height: 2px; background: var(--border); border-radius: 1px; }
+    .confidence-bar { height: 100%; border-radius: 1px; transition: width 0.5s ease; }
+
+    .insight-finding { font-size: 0.83rem; color: #b0b3bb; line-height: 1.6; margin-bottom: 10px; }
+    .metric-cited-tag { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--sub); background: #0c0d0f; border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; display: inline-block; margin-top: 4px; word-break: break-word; }
+
+    /* Recommendations */
+    .recs-section { margin-bottom: 48px; }
+    .rec-list { display: flex; flex-direction: column; gap: 10px; }
+    .rec-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 22px; display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; }
+    .rec-num { font-family: 'DM Mono', monospace; font-size: 1.3rem; font-weight: 500; color: var(--accent); line-height: 1; }
+    .rec-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--text); margin-bottom: 6px; }
+    .rec-reasoning { font-size: 0.8rem; color: var(--sub); margin-bottom: 8px; line-height: 1.55; }
+    .rec-cited { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--sub); margin-top: 6px; }
+
+    /* Agent trace */
+    .trace-section { margin-bottom: 48px; }
+    .trace-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+    .trace-toggle:hover .section-label { color: var(--accent); }
+    .trace-toggle-icon { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--sub); transition: transform 0.2s; }
+    .trace-toggle-icon.open { transform: rotate(180deg); }
+    .trace-body { display: none; padding-top: 14px; }
+    .trace-body.open { display: block; }
+    .trace-step { display: flex; gap: 14px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+    .trace-step-num { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); min-width: 24px; padding-top: 2px; }
+    .trace-step-tool { font-family: 'DM Mono', monospace; font-size: 0.75rem; font-weight: 500; color: var(--accent); margin-bottom: 3px; }
+    .trace-step-reason { font-size: 0.78rem; color: var(--sub); margin-bottom: 6px; line-height: 1.5; }
+    .trace-step-result { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: #555a66; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 8px 10px; white-space: pre-wrap; word-break: break-all; max-height: 110px; overflow-y: auto; }
+
+    footer { border-top: 1px solid var(--border); padding-top: 24px; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+    @media (max-width: 600px) {
+      .url-form { flex-direction: column; }
+      .rec-card { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="logo">page<span>.</span>audit</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="badge-agentic">AGENTIC · PAR LOOP</div>
+      <div class="badge">SEO · UX · Conversion · Video</div>
+    </div>
+  </header>
+
+  <section class="input-section">
+    <div class="eyebrow">// AI-Native Website Audit Tool v3</div>
+    <h1>Drop a URL.<br>Get <em>actionable</em> insights.</h1>
+    <div class="url-form">
+      <input type="text" id="urlInput" class="url-input" placeholder="https://example.com" autocomplete="off" spellcheck="false" />
+      <button class="audit-btn" id="auditBtn" onclick="runAudit()">Run Audit →</button>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </section>
+
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <span id="loaderText">Agent is planning the audit…</span>
+  </div>
+
+  <div id="results">
+    <div class="results-header">
+      <div class="results-url">Audit for → <strong id="auditedUrl"></strong></div>
+      <div class="results-meta">
+        <div class="steps-badge" id="stepsBadge"></div>
+        <div class="render-badge" id="renderBadge"></div>
+      </div>
+    </div>
+
+    <div class="metrics-section">
+      <div class="section-label">01 — Factual Metrics</div>
+      <div class="metrics-grid" id="metricsGrid"></div>
+      <div id="videoMetrics"></div>
+      <div class="meta-block" id="metaBlock"></div>
+    </div>
+
+    <div class="insights-section">
+      <div class="section-label">02 — AI Insights</div>
+      <div class="insight-cards" id="insightCards"></div>
+    </div>
+
+    <div class="recs-section">
+      <div class="section-label">03 — Prioritized Recommendations</div>
+      <div class="rec-list" id="recList"></div>
+    </div>
+
+    <div class="trace-section">
+      <div class="trace-toggle" onclick="toggleTrace()">
+        <div class="section-label" style="margin-bottom:0">04 — Agent Trace</div>
+        <span class="trace-toggle-icon" id="traceIcon">▼</span>
+      </div>
+      <div class="trace-body" id="traceBody"></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>page.audit v3 · Agentic PAR loop · Works on all tech stacks</span>
+    <span>Static HTML · Next.js SSR · React / Vue / Angular SPA</span>
+  </footer>
+</div>
+
+<script>
+  const INSIGHT_LABELS = {
+    seo_structure:     'SEO Structure',
+    messaging_clarity: 'Messaging Clarity',
+    cta_usage:         'CTA Usage',
+    content_depth:     'Content Depth',
+    ux_concerns:       'UX Concerns',
+    video_analysis:    'Video Analysis',
+  };
+
+  const LOADER_MSGS = [
+    'Agent is planning the audit…',
+    'Calling scrape_page tool…',
+    'Fetching video metrics…',
+    'Reading page content…',
+    'Reflecting on findings…',
+    'Running self-critique pass…',
+    'Grounding insights in metrics…',
+    'Finalising recommendations…',
+  ];
+
+  let agentSteps = [];
+
+  async function runAudit() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) { showError('Please enter a URL.'); return; }
+    const btn = document.getElementById('auditBtn');
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('results').style.display  = 'none';
+    btn.disabled = true;
+    document.getElementById('loader').classList.add('active');
+
+    let msgIdx = 0;
+    document.getElementById('loaderText').textContent = LOADER_MSGS[0];
+    const iv = setInterval(() => {
+      msgIdx = (msgIdx + 1) % LOADER_MSGS.length;
+      document.getElementById('loaderText').textContent = LOADER_MSGS[msgIdx];
+    }, 3500);
+
+    try {
+      const res  = await fetch('/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (!res.ok) { showError(data.detail || 'Audit failed.'); return; }
+
+      agentSteps = data.agent_steps || [];
+      renderResults(url, data.metrics, data.insights, data.steps_taken, data.render_method);
+    } catch(e) {
+      showError('Network error — is the server running?');
+    } finally {
+      clearInterval(iv);
+      document.getElementById('loader').classList.remove('active');
+      btn.disabled = false;
+    }
+  }
+
+  function showError(msg) {
+    const b = document.getElementById('errorBox');
+    b.textContent = '✗  ' + msg;
+    b.style.display = 'block';
+  }
+
+  function scoreColor(s) {
+    if (s >= 80) return 'var(--good)';
+    if (s >= 50) return 'var(--fair)';
+    return 'var(--poor)';
+  }
+
+  function confColor(c) {
+    if (c >= 80) return 'var(--good)';
+    if (c >= 50) return 'var(--fair)';
+    return 'var(--poor)';
+  }
+
+  function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderResults(url, m, insights, stepsTaken, renderMethod) {
+    document.getElementById('auditedUrl').textContent = url;
+
+    // Steps badge
+    if (stepsTaken) {
+      document.getElementById('stepsBadge').textContent = `${stepsTaken} agent steps`;
+    }
+
+    // Render badge
+    const rm = renderMethod || m.render_method || 'static';
+    const badge = document.getElementById('renderBadge');
+    const labels = {
+      'static':         '⚡ Static HTML',
+      'next.js-ssr':    '⚡ Next.js SSR',
+      'playwright':     '⚡ JS-Rendered',
+      'unknown':        '? Unknown',
+    };
+    badge.textContent = labels[rm] || '⚡ ' + rm;
+    const colors = {
+      'static': { c: 'var(--good)', b: '#1f4030' },
+      'next.js-ssr': { c: 'var(--fair)', b: '#3d3310' },
+      'playwright': { c: 'var(--blue)', b: '#1e3a5f' },
+    };
+    const bc = colors[rm] || { c: 'var(--sub)', b: 'var(--border)' };
+    badge.style.color = bc.c;
+    badge.style.borderColor = bc.b;
+
+    // Core metric cards
+    const hi = m.heading_issues || [];
+    const h  = m.headings || {};
+    const lk = m.links    || {};
+    const im = m.images   || {};
+
+    const coreCards = [
+      { label: 'Word Count',     value: (m.word_count || 0).toLocaleString(), sub: 'main content only' },
+      { label: 'H1 / H2 / H3',  value: `${h.h1||0} / ${h.h2||0} / ${h.h3||0}`,
+        sub: hi.length ? hi.join(', ') : 'hierarchy valid', warn: hi.length > 0 },
+      { label: 'Primary CTAs',   value: m.cta_primary_count   ?? 0,
+        sub: (m.cta_primary_texts||[]).slice(0,3).join(', ') || 'none detected',
+        warn: (m.cta_primary_count ?? 0) === 0 },
+      { label: 'Secondary CTAs', value: m.cta_secondary_count ?? 0,
+        sub: 'discover, learn more…' },
+      { label: 'Raw CTA Total',  value: m.cta_raw_total ?? 0,
+        sub: 'incl. repeated instances' },
+      { label: 'Internal Links', value: lk.internal ?? 0, sub: `${lk.total ?? 0} total` },
+      { label: 'External Links', value: lk.external ?? 0, sub: '' },
+      { label: 'Images',         value: im.total ?? 0, sub: '' },
+      { label: 'Missing Alt Text', value: `${im.missing_alt_pct ?? 0}%`,
+        sub: `${im.missing_alt ?? 0} of ${im.total ?? 0}`,
+        warn: (im.missing_alt_pct ?? 0) > 30 },
+    ];
+
+    document.getElementById('metricsGrid').innerHTML = coreCards.map(c => `
+      <div class="metric-card${c.warn ? ' warn' : ''}">
+        <div class="metric-label">${esc(c.label)}</div>
+        <div class="metric-value">${esc(String(c.value))}</div>
+        ${c.sub ? `<div class="metric-sub">${esc(c.sub)}</div>` : ''}
+      </div>
+    `).join('');
+
+    // Video metrics
+    const vid = m.videos;
+    const vRow = document.getElementById('videoMetrics');
+    if (vid && vid.total >= 0) {
+      const vcards = [
+        { label: 'Total Videos',     value: vid.total,                             sub: 'detected' },
+        { label: 'Native Video Tags',value: vid.native,                            sub: 'HTML5 <video>' },
+        { label: 'YouTube Embeds',   value: vid.youtube_embeds,                    sub: 'iframe' },
+        { label: 'Vimeo Embeds',     value: vid.vimeo_embeds,                      sub: 'iframe' },
+        { label: 'Missing Captions', value: `${vid.native_missing_captions_pct}%`,
+          sub: `${vid.native_missing_captions} of ${vid.native}`,
+          warn: vid.native_missing_captions_pct > 0 },
+        { label: 'Missing Poster',   value: `${vid.native_missing_poster_pct}%`,
+          sub: `${vid.native_missing_poster} of ${vid.native}`,
+          warn: vid.native_missing_poster_pct > 0 },
+        { label: 'Embeds No Title',  value: vid.embeds_missing_title,
+          sub: 'accessibility (WCAG)', warn: vid.embeds_missing_title > 0 },
+        { label: 'Missing ARIA',     value: vid.native_missing_aria,
+          sub: 'screen reader gap', warn: vid.native_missing_aria > 0 },
+      ];
+      vRow.innerHTML = `
+        <div class="video-section-label">// Video Metrics</div>
+        <div class="metrics-grid">
+          ${vcards.map(c => `
+            <div class="metric-card video-card${c.warn ? ' warn' : ''}">
+              <div class="metric-label">${esc(c.label)}</div>
+              <div class="metric-value">${esc(String(c.value))}</div>
+              ${c.sub ? `<div class="metric-sub">${esc(c.sub)}</div>` : ''}
+            </div>`).join('')}
+        </div>`;
+    } else {
+      vRow.innerHTML = '';
+    }
+
+    // Meta block
+    const meta = m.meta || {};
+    const schemaStatus = meta.has_schema_markup
+      ? '<span style="color:var(--good)">✓ detected</span>'
+      : '<span style="color:var(--poor)">✗ not found</span>';
+    const canonicalVal = meta.canonical_url
+      ? `<span style="color:var(--good)">${esc(meta.canonical_url)}</span>`
+      : '<span style="color:var(--poor)">not found</span>';
+
+    document.getElementById('metaBlock').innerHTML = `
+      <div class="meta-row">
+        <span class="meta-key">Meta Title</span>
+        <span class="meta-val">${esc(meta.title) || '<span style="color:var(--poor)">not found</span>'}</span>
+        <span class="meta-right">
+          <span class="meta-len">${meta.title_length ?? 0} chars</span>
+          <span class="flag-pill flag-${esc(meta.title_flag || 'optimal')}">${esc(meta.title_flag || '—')}</span>
+        </span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-key">Meta Description</span>
+        <span class="meta-val">${esc(meta.description) || '<span style="color:var(--poor)">not found</span>'}</span>
+        <span class="meta-right">
+          <span class="meta-len">${meta.description_length ?? 0} chars</span>
+          <span class="flag-pill flag-${esc(meta.description_flag || 'optimal')}">${esc(meta.description_flag || '—')}</span>
+        </span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-key">Canonical Tag</span>
+        <span class="meta-val">${canonicalVal}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-key">Schema.org Markup</span>
+        <span class="meta-val">${schemaStatus}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-key">Indexing</span>
+        <span class="meta-val">
+          <span style="color:${meta.is_noindex ? 'var(--poor)' : 'var(--good)'}">
+            ${meta.is_noindex ? '✗ noindex set' : '✓ indexable'}
+          </span>
+          &nbsp;·&nbsp;
+          viewport: <span style="color:${meta.viewport_meta ? 'var(--good)' : 'var(--fair)'}">
+            ${meta.viewport_meta ? 'set' : 'missing'}
+          </span>
+        </span>
+      </div>
+      ${(m.h1_texts || []).length ? `
+      <div class="meta-row">
+        <span class="meta-key">H1 Text(s)</span>
+        <span class="meta-val">${m.h1_texts.map(t => esc(t)).join(' · ')}</span>
+      </div>` : ''}
+      ${meta.og_title ? `
+      <div class="meta-row">
+        <span class="meta-key">OG Title</span>
+        <span class="meta-val">${esc(meta.og_title)}</span>
+      </div>` : ''}
+    `;
+
+    // AI insight cards
+    const keys = ['seo_structure','messaging_clarity','cta_usage','content_depth','ux_concerns','video_analysis'];
+    document.getElementById('insightCards').innerHTML = keys.map(key => {
+      const item = insights[key];
+      if (!item) return '';
+      const score = typeof item.score === 'number' ? item.score : 50;
+      const conf  = typeof item.confidence === 'number' ? item.confidence : null;
+      const col   = scoreColor(score);
+      return `
+        <div class="insight-card${key === 'video_analysis' ? ' video-insight' : ''}">
+          <div class="insight-head">
+            <span class="insight-title">${esc(INSIGHT_LABELS[key])}</span>
+            <div class="score-wrap">
+              <span class="score-num" style="color:${col}">${score}</span>
+              <div class="score-bar-bg">
+                <div class="score-bar" style="width:${score}%;background:${col}"></div>
+              </div>
+            </div>
+          </div>
+          <p class="insight-finding">${esc(item.finding || item.summary || '')}</p>
+          ${item.metric_cited ? `<div class="metric-cited-tag">${esc(item.metric_cited)}</div>` : ''}
+          ${conf !== null ? `
+          <div class="confidence-row">
+            <span class="confidence-label">confidence</span>
+            <div class="confidence-bar-bg">
+              <div class="confidence-bar" style="width:${conf}%;background:${confColor(conf)}"></div>
+            </div>
+            <span class="confidence-label">${conf}</span>
+          </div>` : ''}
+        </div>`;
+    }).join('');
+
+    // Recommendations
+    const recs = (insights.recommendations || []).sort((a,b) => a.priority - b.priority);
+    document.getElementById('recList').innerHTML = recs.map(r => `
+      <div class="rec-card">
+        <div class="rec-num">#${r.priority}</div>
+        <div>
+          <div class="rec-title">${esc(r.action || '')}</div>
+          <div class="rec-reasoning">${esc(r.reasoning || '')}</div>
+          ${r.metric_cited ? `<div class="rec-cited">${esc(r.metric_cited)}</div>` : ''}
+        </div>
+      </div>`).join('');
+
+    // Agent trace
+    renderTrace(agentSteps);
+
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderTrace(steps) {
+    if (!steps || steps.length === 0) {
+      document.getElementById('traceBody').innerHTML =
+        '<p style="font-family:\'DM Mono\',monospace;font-size:0.75rem;color:var(--muted);padding:10px 0">No trace data.</p>';
+      return;
+    }
+    document.getElementById('traceBody').innerHTML = steps.map(s => {
+      if (s.error) return `
+        <div class="trace-step">
+          <div class="trace-step-num">${s.step}</div>
+          <div>
+            <div class="trace-step-tool" style="color:var(--poor)">error</div>
+            <div class="trace-step-reason">${esc(s.error)}</div>
+          </div>
+        </div>`;
+      return `
+        <div class="trace-step">
+          <div class="trace-step-num">${s.step}</div>
+          <div style="flex:1">
+            <div class="trace-step-tool">${esc(s.tool_called)}</div>
+            <div class="trace-step-reason">${esc(s.reason)}</div>
+            <div class="trace-step-result">${esc(JSON.stringify(s.tool_result, null, 2))}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleTrace() {
+    const body = document.getElementById('traceBody');
+    const icon = document.getElementById('traceIcon');
+    const open = body.classList.toggle('open');
+    icon.classList.toggle('open', open);
+  }
+
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runAudit();
+  });
+</script>
+</body>
+</html>
