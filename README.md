@@ -11,8 +11,8 @@ Built for EIGHT25MEDIA's AI-Native Software Engineer assignment.
 
 | Link | Description |
 |------|-------------|
-| **App** | https://audit-tool-production-6990.up.railway.app |
-| **Prompt Logs** | https://audit-tool-production-6990.up.railway.app/logs |
+| **App** | https://audit-tool-with-agents-production.up.railway.app |
+| **Prompt Logs** | https://audit-tool-with-agents-production.up.railway.app/logs |
 | **GitHub** | https://github.com/gayan2002/audit-tool-with-agents |
 
 > The `/logs` endpoint returns the last 5 prompt logs as JSON - showing the full system prompt, every tool call and result, structured metrics payload, and raw model output before parsing.
