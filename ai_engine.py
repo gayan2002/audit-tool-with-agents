@@ -8,7 +8,7 @@ from datetime import datetime
 from tools import TOOL_REGISTRY, TOOL_SCHEMA, clear_cache
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-MODEL = os.getenv("OPENROUTER_MODEL", "mistralai/mistral-small-3.1-24b-instruct:free")
+MODEL = os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
 MAX_STEPS = 10
 
 
